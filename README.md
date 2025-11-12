@@ -157,7 +157,7 @@ python full_pipeline.py --bag "/path/to/your/bag_folder" --topic "/depth"
 
 **1. Plane detection overview**
 
-![RANSAC Frames Overview](Results/ransac_frames_overview.png)
+![RANSAC Frames Overview](ransac_plots.png)
 
 **2. Rotation axis visualization**
 

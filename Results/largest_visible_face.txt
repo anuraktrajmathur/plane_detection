@@ -1,4 +1,4 @@
 Largest visible face summary
 Frame: 1
-Visible Area (m^2): 1.109092
-Normal Angle (deg): 45.886
+Visible Area (m^2): 1.105544
+Normal Angle (deg): 45.961

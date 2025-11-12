@@ -1,5 +1,5 @@
 2D Projection / Circle Fit Results
-Circle center (u,v): -0.001025, -0.000383
-Radius: 0.991426
-Residuals per frame: [-0.001411 -0.003241 -0.000243  0.000775  0.000606  0.005702 -0.002214]
-Mean abs residual: 0.002027
+Circle center (u,v): -0.001047, -0.000308
+Radius: 0.982082
+Residuals per frame: [-0.001173 -0.004681  0.001609 -0.0001    0.000406  0.007518 -0.003625]
+Mean abs residual: 0.002730
