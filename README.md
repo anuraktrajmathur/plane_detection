@@ -21,14 +21,22 @@ project_root/
 │   ├── data.db3
 │   └── metadata.yaml
 │
-├── Results/                         # Auto-created output directory
-│   ├── ransac_results.csv
-│   ├── ransac_results_with_axis.csv
-│   ├── largest_visible_face.txt
-│   ├── rotation_axis.txt
-│   ├── rotation_axis_3d.png
-│   ├── normals_projected_circle.png
-│   └── ransac_frames_overview.png
+Results/
+├── ransac_results.csv                # Per-frame plane metrics (normals, angle, visible area)
+├── ransac_results_with_axis.csv      # Extended CSV including estimated rotation axis
+├── largest_visible_face.txt          # Summary of the largest visible face
+├── rotation_axis.txt                 # Estimated rotation axis (unit vector, SVD diagnostics)
+├── rotation_axis_3d.png              # 3D visualization of normals and rotation axis
+├── normals_projected_circle.png      # 2D projection of normals and fitted rotation circle
+├── temporal_angle_validation.png     # Plane angle vs. time for temporal validation
+└── ransac_plots/                     # Folder containing individual frame RANSAC visualizations
+    ├── frame_01.png
+    ├── frame_02.png
+    ├── frame_03.png
+    ├── frame_04.png
+    ├── frame_05.png
+    ├── frame_06.png
+    └── frame_07.png
 │
 ├── full_pipeline.py        # Main pipeline script
 ├── requirements.txt                 # Dependencies
@@ -86,7 +94,7 @@ Results/circle_fit_results.txt
 | `rotation_axis.txt` | Estimated rotation axis (unit vector, SVD diagnostics) |
 | `rotation_axis_3d.png` | 3D visualization of normals and rotation axis |
 | `normals_projected_circle.png` | 2D projection of normals and fitted rotation circle |
-| `ransac_frames_overview.png` | Combined 3D plots for first few frames |
+| `ransac_plots` | Directory containing 3D plots for first few frames |
 
 ---
 

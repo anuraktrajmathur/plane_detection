@@ -1,4 +1,4 @@
 Estimated rotation axis (camera frame)
-Axis (unit): [-0.988973  0.04966   0.13952 ]
-Mean normals: [ 0.008388 -0.173622 -0.881756]
-SVD singular values: [1.135891 0.230422 0.051946]
+Axis (unit): [-0.98943   0.046433  0.137379]
+Mean normals: [ 0.006688 -0.170646 -0.884934]
+SVD singular values: [1.1221   0.227359 0.057376]

@@ -29,6 +29,8 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_BAG_FOLDER = SCRIPT_DIR / "depth_data"
 RESULTS_DIR = SCRIPT_DIR / "Results"
 RESULTS_DIR.mkdir(exist_ok=True)
+PLOTS_DIR = RESULTS_DIR / "ransac_plots"
+PLOTS_DIR.mkdir(exist_ok=True)
 
 ## Configuration
 BAG_FOLDER = DEFAULT_BAG_FOLDER
@@ -64,7 +66,7 @@ def read_depth_frames(bag_path: Path, topic_name: str):
             print(f" - {c.topic} [{c.msgtype}]")
         conns = [x for x in reader.connections if x.topic == topic_name]
         if not conns:
-            print(f"\n❌ Topic '{topic_name}' not found in bag. Choose one from the above and re-run.")
+            print(f"\n Topic '{topic_name}' not found in bag. Choose one from the above and re-run.")
             return [], []
         for conn, t, raw in reader.messages(connections=conns):
             msg = reader.deserialize(raw, conn.msgtype)
@@ -138,16 +140,25 @@ def run_task1(frames, show_plots=True):
         raise RuntimeError("No frames to process.")
 
     h, w = frames[0].shape
-    h1 = int(h*(0.5 - CROP_RATIO/2)); h2 = int(h*(0.5 + CROP_RATIO/2))
-    w1 = int(w*(0.5 - CROP_RATIO/2)); w2 = int(w*(0.5 + CROP_RATIO/2))
+    h1 = int(h * (0.5 - CROP_RATIO / 2))
+    h2 = int(h * (0.5 + CROP_RATIO / 2))
+    w1 = int(w * (0.5 - CROP_RATIO / 2))
+    w2 = int(w * (0.5 + CROP_RATIO / 2))
 
     results = []
-    if show_plots:
-        fig = plt.figure(figsize=(18,9))
+
+    # --- Create folder for frame plots ---
+    PLOTS_DIR = RESULTS_DIR / "ransac_plots"
+    PLOTS_DIR.mkdir(exist_ok=True)
 
     for i, depth in enumerate(frames[:PROCESS_FRAMES]):
         cropped = depth[h1:h2, w1:w2]
-        points = depth_to_pointcloud(cropped, depth_min=DEPTH_CLIP[0], depth_max=DEPTH_CLIP[1], smooth=True)
+        points = depth_to_pointcloud(
+            cropped,
+            depth_min=DEPTH_CLIP[0],
+            depth_max=DEPTH_CLIP[1],
+            smooth=True
+        )
         if len(points) < MIN_POINTS_PER_FRAME:
             print(f"Skipping Frame {i+1}: only {len(points)} points")
             continue
@@ -164,7 +175,7 @@ def run_task1(frames, show_plots=True):
         area = compute_visible_area(inliers)
 
         results.append({
-            "Frame": i+1,
+            "Frame": i + 1,
             "Normal_X": float(normal[0]),
             "Normal_Y": float(normal[1]),
             "Normal_Z": float(normal[2]),
@@ -173,36 +184,40 @@ def run_task1(frames, show_plots=True):
             "InlierCount": int(len(inliers))
         })
 
+        # --- Generate and save individual 3D plot per frame ---
         if show_plots:
-            ax = fig.add_subplot(2, 4, i+1, projection='3d')
+            fig = plt.figure(figsize=(6, 6))
+            ax = fig.add_subplot(111, projection='3d')
+
             sample = points[::max(1, DOWNSAMPLE_FOR_PLOT)]
-            ax.scatter(sample[:,0], sample[:,1], sample[:,2], s=0.5, color='gray', alpha=0.3)
-            ax.scatter(inliers[:,0], inliers[:,1], inliers[:,2], s=2.0, color='red', label='Inliers')
-            z_mean = float(np.nanmean(inliers[:,2]))
+            ax.scatter(sample[:, 0], sample[:, 1], sample[:, 2], s=0.5, color='gray', alpha=0.3)
+            ax.scatter(inliers[:, 0], inliers[:, 1], inliers[:, 2], s=2.0, color='red', label='Inliers')
+
+            z_mean = float(np.nanmean(inliers[:, 2]))
             ax.quiver(0, 0, z_mean, normal[0], normal[1], normal[2],
                       length=0.25, color='blue', label='Normal')
+
             draw_bounding_box(ax, inliers)
-            ax.set_title(f"Frame {i+1}\nAngle={angle:.1f}°", fontsize=9)
+
+            ax.set_title(f"Frame {i+1}\nAngle={angle:.1f}°", fontsize=10)
             ax.set_xlabel('Y [m]')
             ax.set_ylabel('X [m]')
             ax.set_zlabel('Z [m]')
             ax.view_init(elev=20, azim=0)
-            ax.set_box_aspect([1,1,1])
+            ax.set_box_aspect([1, 1, 1])
             ax.legend(fontsize=6, loc='upper left')
 
-    if show_plots:
-        plt.suptitle("Cuboid Face Detection + Bounding Box (Front View, Cropped ROI)",
-                     fontsize=14, y=0.94)
-        plt.tight_layout()
+            # Save figure
+            frame_plot_path = PLOTS_DIR / f"frame_{i+1:02d}.png"
+            plt.tight_layout()
+            plt.savefig(frame_plot_path, dpi=200, bbox_inches='tight')
+            print(f"✅ Saved plot for Frame {i+1} → '{frame_plot_path}'")
+            plt.show(block=True)
+            plt.close(fig)
 
-        # Save the combined subplot figure to Results folder
-        output_path = RESULTS_DIR / "ransac_frames_overview.png"
-        plt.savefig(output_path, dpi=200, bbox_inches='tight')
-        print(f"Saved subplot figure to '{output_path}'")
-
-        plt.show()
     df = pd.DataFrame(results)
     return df
+
 
 def summarize_and_save_task1(df):
     # Accept None as empty
@@ -233,6 +248,7 @@ def summarize_and_save_task1(df):
     df.to_csv(OUTPUT_CSV, index=False)
     print(f"Saved per-frame results to '{OUTPUT_CSV}' and largest info to '{LARGEST_TEXT}'")
     return df, int(largest_frame)
+
 
 ## Task 2: estimate rotation axis from normals and visualize
 def estimate_rotation_axis_from_normals(normals):
@@ -324,7 +340,7 @@ def project_and_fit_circle(normals, axis, save_img=CIRCLE_IMG, save_txt=CIRCLE_R
         f.write("Residuals per frame: " + np.array2string(np.round(residuals,6)) + "\n")
         f.write(f"Mean abs residual: {np.mean(np.abs(residuals)):.6f}\n")
 
-    print(f"Saved 2D circle image to '{save_img}' and diagnostics to '{save_txt}'")
+    print(f"Saved 2D circle image to '{save_img}' and diagnostics to '{save_txt}'") 
     return xc, yc, r, residuals
 
 
@@ -371,6 +387,49 @@ def main(no_plots=False):
     except Exception as e:
         print("Rotation axis estimation failed:", e)
 
+    # -------------------------
+    # 5.3 Temporal Validation (Optional)
+    # -------------------------
+    try:
+        if len(frames) > 1 and "Angle_deg" in df.columns:
+            print("\n Performing temporal validation...")
+
+            # Prepare temporal data
+            if len(timestamps) == len(df):
+                # Convert nanoseconds to seconds
+                t_rel = (np.array(timestamps) - timestamps[0]) * 1e-9
+                x_vals = t_rel
+                x_label = "Time [s]"
+            else:
+                # fallback to frame index if timestamps unavailable
+                x_vals = np.arange(1, len(df) + 1)
+                x_label = "Frame Index"
+
+            # Plot angle over time
+            plt.figure(figsize=(8, 4))
+            plt.plot(x_vals, df["Angle_deg"], marker='o', color='tab:blue', linewidth=2)
+            plt.title("Temporal Validation: Plane Angle Across Frames")
+            plt.xlabel(x_label)
+            plt.ylabel("Plane Angle (°)")
+            plt.grid(True)
+            plt.tight_layout()
+
+            # Save to /Results/
+            temporal_plot_path = RESULTS_DIR / "temporal_angle_validation.png"
+            plt.savefig(temporal_plot_path, dpi=200, bbox_inches="tight")
+            print(f"Saved temporal validation plot to '{temporal_plot_path}'")
+
+            if not no_plots:
+                plt.show()
+
+            plt.close()
+        else:
+            print("Temporal validation skipped (insufficient frames or missing angle data).")
+
+    except Exception as e:
+        print(f"Temporal validation failed: {e}")
+
+
 ## CLI
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="Full pipeline for plane detection and rotation axis estimation")
@@ -384,5 +443,5 @@ if __name__ == "__main__":
 
     if not BAG_FOLDER.exists():
         raise RuntimeError(f"Bag folder '{BAG_FOLDER}' not found. Place 'depth_data' in the same directory as this script.")
-
+    
 main(no_plots=args.no_plots)
